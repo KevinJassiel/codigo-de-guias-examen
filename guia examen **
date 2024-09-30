@@ -1,0 +1,61 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from bs4 import BeautifulSoup
+import pandas as pd
+import time
+
+# Ruta a tu controlador de navegador (en este caso ChromeDriver)
+chrome_driver_path = "C:/Users/Toshiba/Downloads/chromedriver-win64/chromedriver.exe"
+
+# Crear una instancia de WebDriver
+service = Service(chrome_driver_path)
+driver = webdriver.Chrome(service=service)
+
+# URL de la página web que quieres extraer (puede ser un ejemplo de una tienda en línea)
+url = "https://tiendapanini.com.mx/coleccionables/item-3"
+
+# Abre la página web
+driver.get(url)
+
+# Esperar un poco para asegurarnos que la página se cargue completamente
+time.sleep(5)
+
+# Obtener el código HTML de la página
+html = driver.page_source
+
+# Crear el objeto BeautifulSoup
+soup = BeautifulSoup(html, 'html.parser')
+
+# Encuentra todos los elementos de los productos (esto depende de la estructura de la página)
+productos = soup.find_all('li', class_='item product product-item')
+
+# Listas para almacenar los datos extraídos
+nombres_productos = []
+precios_productos = []
+
+# Extraer nombres y precios de los productos
+for producto in productos:
+    nombre = producto.find('a', class_='product-item-link').text
+    precio = producto.find('span', class_='price').text
+
+    nombres_productos.append(nombre)
+    precios_productos.append(precio)
+
+# Cerrar el navegador
+driver.quit()
+
+# Crear un DataFrame con los datos extraídos
+df = pd.DataFrame({
+    'Nombre del Producto': nombres_productos,
+    'Precio': precios_productos
+})
+
+# Exportar el DataFrame a un archivo CSV
+df.to_csv('producto.csv', index=False)
+
+print("Archivo CSV generado exitosamente")
+
+
+#esto lo agrego si no se en que parte se fue el archivo csv creado
+import os
+print(f"Archivo guardado en: {os.getcwd()}")
