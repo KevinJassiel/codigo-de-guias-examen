@@ -1,0 +1,77 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# Ruta a tu controlador de navegador (en este caso ChromeDriver)
+chrome_driver_path = "C:/Users/Toshiba/Downloads/chromedriver-win64/chromedriver.exe"
+
+# Crear una instancia de WebDriver
+service = Service(chrome_driver_path)
+driver = webdriver.Chrome(service=service)
+
+# URL de la página web que quieres extraer
+url = "https://www.rappi.com.mx/restaurantes/1923219008-taqueria-el-jockey"
+
+# Abre la página web
+driver.get(url)
+
+# Listas para almacenar los datos extraídos
+nombres_productos = []
+precios_productos = []
+
+# Esperar a que la página se cargue completamente
+time.sleep(5)
+
+# Iterar para obtener productos hasta que no haya más páginas
+while True:
+    # Obtener el código HTML de la página
+    html = driver.page_source
+
+    # Crear el objeto BeautifulSoup
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # Encuentra todos los elementos de los productos
+    productos = soup.find_all('div', class_='css-cxew8w')
+
+    # Extraer nombres y precios de los productos
+    for producto in productos:
+        nombre = producto.find('h4', class_='chakra-text css-puxjan').text.strip()
+        precio = producto.find('span', class_='chakra-text css-kowr8').text.strip()
+
+        nombres_productos.append(nombre)
+        precios_productos.append(precio)
+
+    # Intentar hacer clic en el botón "Siguiente"
+    try:
+        # Esperar hasta que el botón "Siguiente" sea visible y clickeable
+        siguiente = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR,"a.action.next"))
+        )
+        siguiente.click()
+
+        # Esperar a que la nueva página se cargue completamente
+        time.sleep(5)
+
+    except Exception as e:
+        print("No se pudo encontrar el botón 'Siguiente' o ya estás en la última página.")
+        break
+
+# Cerrar el navegador
+driver.quit()
+
+# Crear un DataFrame con los datos extraídos
+df = pd.DataFrame({
+    'Nombre del Producto': nombres_productos,
+    'Precio': precios_productos
+})
+
+# Exportar el DataFrame a un archivo CSV
+df.to_csv('rappi.csv', index=False)
+
+print("Archivo CSV generado exitosamente")
+
