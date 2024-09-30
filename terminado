@@ -1,0 +1,91 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# Ruta a tu controlador de navegador (en este caso ChromeDriver)
+chrome_driver_path = "C:/Users/AlumnoFCA/Downloads/chromedriver-win64/chromedriver.exe"
+
+# Crear una instancia de WebDriver
+service = Service(chrome_driver_path)
+driver = webdriver.Chrome(service=service)
+
+# URL de la página web que quieres extraer
+url = "https://www.ebay.com/sch/i.html?_from=R40&_trksid=p4432023.m570.l1313&_nkw=televisores&_sacat=0"
+
+# Abre la página web
+driver.get(url)
+
+# Listas para almacenar los datos extraídos
+nombres_productos = []
+precios_productos = []
+precios_envios = []
+estado_pruducto = []
+reseña_producto = []
+
+# Esperar a que la página se cargue completamente
+time.sleep(5)
+
+contador_paginas = 0
+limite_paginas = 15
+
+# Iterar para obtener productos hasta que no haya más páginas
+while contador_paginas < limite_paginas:
+    # Obtener el código HTML de la página
+    html = driver.page_source
+
+    # Crear el objeto BeautifulSoup
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # Encuentra todos los elementos de los productos
+    productos = soup.find_all('div', class_='s-item__wrapper clearfix')
+
+    # Extraer nombres y precios de los productos
+    for producto in productos:
+        nombre = producto.find('div', class_='s-item__title').text.strip()
+        precio = producto.find('span', class_='s-item__price').text.strip()
+        envios = producto.find('div', class_='s-item__detail s-item__detail--primary').text.strip()
+        estado = producto.find('span', class_='SECONDARY_INFO').text.strip()
+
+        nombres_productos.append(nombre)
+        precios_productos.append(precio)
+        precios_envios.append(envios)
+        estado_pruducto.append(estado)
+
+    # Intentar hacer clic en el botón "Siguiente"
+    try:
+        # Esperar hasta que el botón "Siguiente" sea visible y clickeable
+        siguiente = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR,"a.pagination__next"))
+        )
+        siguiente.click()
+
+        # Esperar a que la nueva página se cargue completamente
+        time.sleep(5)
+
+        # Incrementar el contador de páginas
+        contador_paginas += 1  # Incrementa el contador aquí
+
+    except Exception as e:
+        print("No se pudo encontrar el botón 'Siguiente' o ya estás en la última página.")
+        break
+
+# Cerrar el navegador
+driver.quit()
+
+# Crear un DataFrame con los datos extraídos
+df = pd.DataFrame({
+    'Nombre del Producto': nombres_productos,
+    'Precio': precios_productos,
+    'Precio envio': precios_envios,
+    'Estado del producto': estado_pruducto,
+})
+
+# Exportar el DataFrame a un archivo CSV
+df.to_csv('si.csv', index=False)
+
+print("Archivo CSV generado exitosamente")
